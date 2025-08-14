@@ -2,9 +2,7 @@ from config import INPUT_LANGUAGE, TARGET_LANGUAGE
 
 
 def get_language_name(language_code):
-    """
-    Возвращает название языка на английском
-    """
+    """Возвращает английское название языка по коду"""
     language_names = {
         "english": "English",
         "russian": "Russian",
@@ -16,20 +14,17 @@ def get_language_name(language_code):
         "japanese": "Japanese",
         "korean": "Korean",
     }
-    return language_names.get(language_code.lower(), language_code.title())
+    return language_names.get(language_code, language_code)
 
 
 def generate_prompt():
-    """
-    Генерирует промпт для перевода на основе настроек языков
-    """
+    """Генерирует промпт для перевода на основе настроек"""
     input_lang = get_language_name(INPUT_LANGUAGE)
     target_lang = get_language_name(TARGET_LANGUAGE)
 
     prompt = f"""Translate the text content (not tags or attributes) of all span elements in an HTML string from {input_lang} to {target_lang}. Preserve all tags, structure, order, and all attributes unchanged. Do not translate tags, class names, IDs, href, src, alt, or any attribute values. If text cannot be translated (e.g., unreadable), leave it as is.
 
 # Steps
-
 1. Read the input HTML string line.
 2. Identify all span elements with text content.
 3. Translate only the text content within span elements from {input_lang} to {target_lang}.
@@ -38,11 +33,9 @@ def generate_prompt():
 6. Output a single HTML string line in the same format, but with only the span text content translated to {target_lang}.
 
 # Output Format
-
 A single HTML string line with the same structure as the input, but with the text content within span elements translated to {target_lang}. Do not wrap your output in code blocks.
 
 # Examples
-
 **Example 1**  
 Input: `<p><span class="font0" style="font-weight:bold;">Figure 3.1 </span><span class="font0">Brain activity assessed with PET during Raven's Test.</span></p>`  
 Output: `<p><span class="font0" style="font-weight:bold;">Рисунок 3.1 </span><span class="font0">Активность мозга, оцененная с помощью ПЭТ во время теста Равена.</span></p>`
@@ -56,7 +49,6 @@ Input: `<p>This line has no span elements.</p>`
 Output: `<p>This line has no span elements.</p>`
 
 # Notes
-
 - Never translate class, id, href, src, alt, or any attribute values.
 - Only translate text directly within span elements.
 - Preserve tags, order, attributes, and nesting exactly.
@@ -70,9 +62,7 @@ Only translate text content within span elements from {input_lang} to {target_la
 
 
 def save_prompt_to_file():
-    """
-    Сохраняет сгенерированный промпт в файл prompt.txt
-    """
+    """Сохраняет сгенерированный промпт в файл"""
     prompt = generate_prompt()
     with open("prompt.txt", "w", encoding="utf-8") as f:
         f.write(prompt)

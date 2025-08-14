@@ -2,9 +2,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from environs import Env
 import httpx
-import os
-
-from prompt_template import generate_prompt
+from src.prompts.prompt_template import generate_prompt
 from config import OPENAI_MODEL
 
 

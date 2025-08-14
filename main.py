@@ -1,14 +1,14 @@
 import os
 import sys
 
-from translator import Translator
-from translator_test import TranslatorTest
-from progress_manager import ProgressManager
-from html_parser import HTMLParser
-from span_merger import SpanMerger
+from src.core.translator import Translator
+from src.core.translator_test import TranslatorTest
+from src.core.progress_manager import ProgressManager
+from src.parsers.html_parser import HTMLParser
+from src.parsers.span_merger import SpanMerger
 from config import MODE, OPENAI_MODEL
-from prompt_template import save_prompt_to_file
-from file_selector import select_file_gui, select_output_file_gui
+from src.prompts.prompt_template import save_prompt_to_file
+from src.gui.file_selector import select_file_gui, select_output_file_gui
 
 
 def get_translator():
