@@ -1,0 +1,11 @@
+[project]
+name = "html-lines-translator"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "environs>=14.3.0",
+    "httpx[socks]>=0.28.1",
+    "langchain-openai>=0.3.30",
+]
