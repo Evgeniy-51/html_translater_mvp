@@ -1,5 +1,5 @@
-MODE = "test"
-# MODE = "work"
+# MODE = "test"
+MODE = "work"
 
 INPUT_LANGUAGE = "english"
 # INPUT_LANGUAGE = "chinese"

@@ -3,6 +3,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from environs import Env
 import httpx
 from src.prompts.prompt_template import generate_prompt
+from src.utils.cost_calculator import format_cost_summary
 from config import OPENAI_MODEL
 
 
@@ -80,6 +81,19 @@ class Translator:
             "total_tokens": self.total_input_tokens + self.total_output_tokens,
             "requests": self.total_requests,
         }
+
+    def get_translation_cost(self):
+        """
+        Возвращает отформатированный отчет о стоимости перевода
+        """
+        if self.total_input_tokens == 0 and self.total_output_tokens == 0:
+            return "Нет данных о токенах для расчета стоимости"
+        
+        return format_cost_summary(
+            OPENAI_MODEL,
+            self.total_input_tokens,
+            self.total_output_tokens
+        )
 
     def close(self):
         """Закрывает HTTP клиент"""

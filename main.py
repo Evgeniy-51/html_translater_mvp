@@ -107,6 +107,11 @@ def process_html_file(input_file, output_file=None):
             print(f"Выходных токенов: {stats['output_tokens']:,}")
             print(f"Всего токенов: {stats['total_tokens']:,}")
             print("==========================")
+            
+            # Выводим стоимость перевода
+            if hasattr(translator, "get_translation_cost"):
+                cost_report = translator.get_translation_cost()
+                print(f"\n{cost_report}")
 
     except KeyboardInterrupt:
         print("\nОбработка прервана пользователем")
