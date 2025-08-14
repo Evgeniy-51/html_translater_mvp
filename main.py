@@ -1,5 +1,6 @@
 import os
 import sys
+
 from translator import Translator
 from translator_test import TranslatorTest
 from progress_manager import ProgressManager
@@ -7,6 +8,7 @@ from html_parser import HTMLParser
 from span_merger import SpanMerger
 from config import MODE, OPENAI_MODEL
 from prompt_template import save_prompt_to_file
+from file_selector import select_file_gui, select_output_file_gui
 
 
 def get_translator():
@@ -96,6 +98,16 @@ def process_html_file(input_file, output_file=None):
 
         print(f"Обработка завершена! Результат сохранен в: {output_file}")
 
+        # Выводим статистику токенов для рабочего режима
+        if MODE == "work" and hasattr(translator, "get_token_stats"):
+            stats = translator.get_token_stats()
+            print("\n=== СТАТИСТИКА ТОКЕНОВ ===")
+            print(f"Запросов к API: {stats['requests']}")
+            print(f"Входных токенов: {stats['input_tokens']:,}")
+            print(f"Выходных токенов: {stats['output_tokens']:,}")
+            print(f"Всего токенов: {stats['total_tokens']:,}")
+            print("==========================")
+
     except KeyboardInterrupt:
         print("\nОбработка прервана пользователем")
         print(
@@ -114,18 +126,48 @@ def process_html_file(input_file, output_file=None):
 
 def main():
     """Основная функция"""
-    if len(sys.argv) < 2:
-        print("Использование: python main.py <input_file> [output_file]")
-        print("Пример: python main.py CONTENT/R_J_Haier_107-112.html")
-        print(f"Текущий режим: {MODE}")
+    # Проверяем аргументы командной строки
+    if len(sys.argv) > 1:
+        # Режим командной строки
+        input_file = sys.argv[1]
+        output_file = sys.argv[2] if len(sys.argv) > 2 else None
+
+        if not os.path.exists(input_file):
+            print(f"Файл {input_file} не найден!")
+            return
+
+        process_html_file(input_file, output_file)
+    else:
+        # Режим GUI
+        print("HTML Lines Translator")
+        print(f"Режим: {MODE}")
         if MODE == "work":
-            print(f"Используемая модель: {OPENAI_MODEL}")
-        return
+            print(f"Модель: {OPENAI_MODEL}")
+        print("-" * 50)
 
-    input_file = sys.argv[1]
-    output_file = sys.argv[2] if len(sys.argv) > 2 else None
+        # Выбираем входной файл
+        print("Выберите HTML файл для перевода...")
+        input_file = select_file_gui()
 
-    process_html_file(input_file, output_file)
+        if input_file is None:
+            print("Выбор файла отменен.")
+            return
+
+        print(f"Выбран файл: {input_file}")
+
+        # Выбираем место сохранения
+        print("Выберите место для сохранения переведенного файла...")
+        output_file = select_output_file_gui(input_file)
+
+        if output_file is None:
+            print("Выбор места сохранения отменен.")
+            return
+
+        print(f"Файл будет сохранен как: {output_file}")
+        print("-" * 50)
+
+        # Обрабатываем файл
+        process_html_file(input_file, output_file)
 
 
 if __name__ == "__main__":

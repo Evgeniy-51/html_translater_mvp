@@ -1,7 +1,9 @@
 from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage
 from environs import Env
 import httpx
 import os
+
 from prompt_template import generate_prompt
 from config import OPENAI_MODEL
 
@@ -10,7 +12,7 @@ class Translator:
     def __init__(self):
         # Загружаем переменные окружения
         env = Env()
-        env.read_env(".env copy")  # Используем копию .env файла
+        env.read_env(".env")
 
         # Получаем данные из .env
         self.api_key = env("OPENAI_API_KEY")
@@ -34,19 +36,34 @@ class Translator:
             http_client=self.http_client,
         )
 
-        # Генерируем динамический промпт
-        self.prompt_template = generate_prompt()
+        # Генерируем системный промпт
+        self.system_prompt = generate_prompt()
+
+        # Счетчики токенов
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        self.total_requests = 0
 
     def translate_line(self, html_line):
         """
         Переводит HTML строку, переводя только текст в span элементах
         """
         try:
-            # Формируем полный промпт с HTML строкой
-            full_prompt = f"{self.prompt_template}\n\nInput: {html_line}\nOutput:"
+            # Создаем сообщения с системным промптом и пользовательским вводом
+            messages = [
+                SystemMessage(content=self.system_prompt),
+                HumanMessage(content=f"Input: {html_line}\nOutput:"),
+            ]
 
             # Отправляем запрос к ChatGPT
-            response = self.llm.invoke(full_prompt)
+            response = self.llm.invoke(messages)
+
+            # Подсчитываем токены
+            if hasattr(response, "response_metadata") and response.response_metadata:
+                usage = response.response_metadata.get("token_usage", {})
+                self.total_input_tokens += usage.get("prompt_tokens", 0)
+                self.total_output_tokens += usage.get("completion_tokens", 0)
+                self.total_requests += 1
 
             return response.content.strip()
 
@@ -54,6 +71,17 @@ class Translator:
             print(f"Ошибка при переводе строки: {e}")
             # В случае ошибки возвращаем оригинальную строку
             return html_line
+
+    def get_token_stats(self):
+        """
+        Возвращает статистику использования токенов
+        """
+        return {
+            "input_tokens": self.total_input_tokens,
+            "output_tokens": self.total_output_tokens,
+            "total_tokens": self.total_input_tokens + self.total_output_tokens,
+            "requests": self.total_requests,
+        }
 
     def close(self):
         """Закрывает HTTP клиент"""

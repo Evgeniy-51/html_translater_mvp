@@ -35,6 +35,12 @@ class TranslatorTest:
 
         return translated_line
 
+    def get_token_stats(self):
+        """
+        Заглушка для совместимости с реальным переводчиком
+        """
+        return {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "requests": 0}
+
     def close(self):
         """Заглушка для совместимости с реальным переводчиком"""
         pass
