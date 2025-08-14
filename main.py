@@ -5,7 +5,8 @@ from translator_test import TranslatorTest
 from progress_manager import ProgressManager
 from html_parser import HTMLParser
 from span_merger import SpanMerger
-from config import MODE
+from config import MODE, OPENAI_MODEL
+from prompt_template import save_prompt_to_file
 
 
 def get_translator():
@@ -16,7 +17,7 @@ def get_translator():
         print("Запуск в ТЕСТОВОМ режиме")
         return TranslatorTest()
     elif MODE == "work":
-        print("Запуск в РАБОЧЕМ режиме")
+        print(f"Запуск в РАБОЧЕМ режиме с моделью: {OPENAI_MODEL}")
         return Translator()
     else:
         raise ValueError(f"Неизвестный режим: {MODE}")
@@ -34,6 +35,9 @@ def process_html_file(input_file, output_file=None):
     if output_file is None:
         base_name = os.path.splitext(input_file)[0]
         output_file = f"{base_name}_translated.html"
+
+    # Обновляем промпт перед началом работы
+    save_prompt_to_file()
 
     # Инициализируем компоненты
     translator = get_translator()
@@ -114,6 +118,8 @@ def main():
         print("Использование: python main.py <input_file> [output_file]")
         print("Пример: python main.py CONTENT/R_J_Haier_107-112.html")
         print(f"Текущий режим: {MODE}")
+        if MODE == "work":
+            print(f"Используемая модель: {OPENAI_MODEL}")
         return
 
     input_file = sys.argv[1]

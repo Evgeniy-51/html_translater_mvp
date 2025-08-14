@@ -4,7 +4,7 @@ Translate the text content (not tags or attributes) of all span elements in an H
 
 1. Read the input HTML string line.
 2. Identify all span elements with text content.
-3. Translate only the text content within span elements to Russian.
+3. Translate only the text content within span elements from English to Russian.
 4. Keep all HTML structure, tags, attributes, and order unchanged.
 5. If there are no span elements or no translatable text, return the line unchanged.
 6. Output a single HTML string line in the same format, but with only the span text content translated to Russian.
@@ -36,4 +36,4 @@ Output: `<p>This line has no span elements.</p>`
 - If there are no span elements, return the line unchanged.
 
 **Reminder:**  
-Only translate text content within span elements; keep HTML structure and attributes unchanged. Return the HTML string line as output.
+Only translate text content within span elements from English to Russian; keep HTML structure and attributes unchanged. Return the HTML string line as output.

@@ -2,6 +2,8 @@ from langchain_openai import ChatOpenAI
 from environs import Env
 import httpx
 import os
+from prompt_template import generate_prompt
+from config import OPENAI_MODEL
 
 
 class Translator:
@@ -24,17 +26,16 @@ class Translator:
         # Настраиваем HTTP-клиент с прокси
         self.http_client = httpx.Client(proxy=proxy_auth_url)
 
-        # Инициализируем ChatGPT
+        # Инициализируем ChatGPT с моделью из конфигурации
         self.llm = ChatOpenAI(
             api_key=self.api_key,
-            model="gpt-4o-mini",  # Используем более доступную модель
+            model=OPENAI_MODEL,
             temperature=0,
             http_client=self.http_client,
         )
 
-        # Загружаем промпт
-        with open("prompt.txt", "r", encoding="utf-8") as f:
-            self.prompt_template = f.read()
+        # Генерируем динамический промпт
+        self.prompt_template = generate_prompt()
 
     def translate_line(self, html_line):
         """
