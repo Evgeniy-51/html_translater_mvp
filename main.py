@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 
 from src.core.translator import Translator
 from src.core.translator_test import TranslatorTest
@@ -25,9 +26,33 @@ def get_translator():
         raise ValueError(f"Неизвестный режим: {MODE}")
 
 
+def create_batch(lines, start_index, batch_size=3):
+    """
+    Создает батч строк для отправки в нейросеть
+    
+    Args:
+        lines: список всех строк
+        start_index: индекс начала батча
+        batch_size: размер батча
+    
+    Returns:
+        list: батч строк с их индексами
+    """
+    batch = []
+    end_index = min(start_index + batch_size, len(lines))
+    
+    for i in range(start_index, end_index):
+        batch.append({
+            "index": i + 1,  # Нумерация с 1
+            "line": lines[i].strip()
+        })
+    
+    return batch
+
+
 def process_html_file(input_file, output_file=None):
     """
-    Обрабатывает HTML файл построчно, переводя span элементы
+    Обрабатывает HTML файл батчами, переводя span элементы
     """
     if not os.path.exists(input_file):
         print(f"Файл {input_file} не найден!")
@@ -65,36 +90,46 @@ def process_html_file(input_file, output_file=None):
         print(f"Начинаем обработку файла: {input_file}")
         print(f"Всего строк после объединения: {total_lines}")
         print(f"Начинаем с строки: {start_line + 1}")
+        print(f"Размер батча: 3 строки")
 
-        # Обрабатываем файл построчно
+        # Обрабатываем файл батчами
         with open(output_file, "w", encoding="utf-8") as output_f:
-
-            for line_number, line in enumerate(processed_lines, 1):
-                # Пропускаем уже обработанные строки
-                if line_number <= start_line:
-                    output_f.write(line)
-                    continue
-
-                # Проверяем, есть ли span элементы
-                if parser.has_span_elements(line):
-                    print(f"Переводим строку {line_number}/{total_lines}")
-
-                    # Переводим строку
-                    translated_line = translator.translate_line(line)
-
-                    # Сохраняем переведенную строку
-                    output_f.write(translated_line + "\n")
-
-                    # Обновляем прогресс
-                    progress_manager.update_progress(line_number, translated=True)
+            i = start_line
+            
+            while i < total_lines:
+                # Создаем батч
+                batch = create_batch(processed_lines, i, batch_size=3)
+                
+                if not batch:
+                    break
+                
+                # Проверяем, есть ли в батче строки с span элементами
+                has_translatable_content = any(
+                    parser.has_span_elements(item["line"]) for item in batch
+                )
+                
+                if has_translatable_content:
+                    print(f"Переводим батч строк {i+1}-{i+len(batch)}/{total_lines}")
+                    
+                    # Отправляем батч на перевод
+                    translated_batch = translator.translate_batch(batch)
+                    
+                    # Сохраняем переведенные строки
+                    for item in translated_batch:
+                        output_f.write(item["translated_line"] + "\n")
+                        progress_manager.update_progress(item["index"], translated=True)
                 else:
-                    # Копируем строку без изменений
-                    output_f.write(line)
-                    progress_manager.update_progress(line_number, translated=False)
-
+                    # Копируем строки без изменений
+                    for item in batch:
+                        output_f.write(item["line"] + "\n")
+                        progress_manager.update_progress(item["index"], translated=False)
+                
+                # Переходим к следующему батчу
+                i += len(batch)
+                
                 # Выводим прогресс каждые 10 строк
-                if line_number % 10 == 0:
-                    print(f"Обработано строк: {line_number}/{total_lines}")
+                if i % 10 == 0 or i >= total_lines:
+                    print(f"Обработано строк: {i}/{total_lines}")
 
         print(f"Обработка завершена! Результат сохранен в: {output_file}")
 

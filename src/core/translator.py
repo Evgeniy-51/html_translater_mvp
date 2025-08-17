@@ -1,8 +1,11 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import PromptTemplate
 from environs import Env
 import httpx
-from src.prompts.prompt_template import generate_prompt
+import json
+from src.prompts.prompt_template import generate_prompt, get_json_schema
 from src.utils.cost_calculator import format_cost_summary
 from config import OPENAI_MODEL
 
@@ -44,9 +47,7 @@ class Translator:
         self.total_requests = 0
 
     def translate_line(self, html_line):
-        """
-        Переводит HTML строку, переводя только текст в span элементах
-        """
+        """Переводит одну строку (для обратной совместимости)"""
         try:
             # Создаем сообщения с системным промптом и пользовательским вводом
             messages = [
@@ -71,6 +72,48 @@ class Translator:
             # В случае ошибки возвращаем оригинальную строку
             return html_line
 
+    def translate_batch(self, batch):
+        """
+        Переводит батч строк с использованием output_format
+
+        Args:
+            batch: список словарей с ключами 'index' и 'line'
+
+        Returns:
+            list: список словарей с ключами 'index' и 'translated_line'
+        """
+        try:
+            # Подготавливаем входные данные
+            input_data = json.dumps(batch, ensure_ascii=False, indent=2)
+
+            # Создаем парсер для JSON с правильной схемой
+            output_parser = JsonOutputParser(pydantic_object=get_json_schema())
+
+            # Создаем промпт с output_format
+            prompt = PromptTemplate(
+                template=self.system_prompt, input_variables=["input"]
+            )
+
+            # Создаем цепочку с output_format
+            chain = prompt | self.llm | output_parser
+
+            # Отправляем запрос
+            response = chain.invoke({"input": input_data})
+
+            # Обновляем статистику токенов (если доступна)
+            # Примечание: с output_parser статистика может быть недоступна
+            self.total_requests += 1
+
+            return response
+
+        except Exception as e:
+            print(f"Ошибка при переводе батча: {e}")
+            # Возвращаем исходные строки в случае ошибки
+            return [
+                {"index": item["index"], "translated_line": item["line"]}
+                for item in batch
+            ]
+
     def get_token_stats(self):
         """
         Возвращает статистику использования токенов
@@ -88,11 +131,9 @@ class Translator:
         """
         if self.total_input_tokens == 0 and self.total_output_tokens == 0:
             return "Нет данных о токенах для расчета стоимости"
-        
+
         return format_cost_summary(
-            OPENAI_MODEL,
-            self.total_input_tokens,
-            self.total_output_tokens
+            OPENAI_MODEL, self.total_input_tokens, self.total_output_tokens
         )
 
     def close(self):

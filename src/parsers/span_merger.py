@@ -24,7 +24,7 @@ class SpanMerger:
         # Проверяем условия объединения
         # 1. Текущий span не заканчивается на знаки завершения
         # 2. Следующий span не начинается с заглавной буквы
-        sentence_endings = [".", "!", "?", "...", ":", ";"]
+        sentence_endings = [".", "!", "?", "...", "!..", "?.."]  # Не изменяй этот список!!!
         current_ends_with_sentence = any(
             current_text.endswith(ending) for ending in sentence_endings
         )
