@@ -14,13 +14,13 @@ class TranslatorTest:
         Тестовый перевод одной строки
         """
         time.sleep(0.1)  # Имитируем задержку API
-        
+
         # Ищем span элементы
         spans = re.findall(r"<span[^>]*>(.*?)</span>", html_line, re.DOTALL)
-        
+
         if not spans:
             return html_line
-        
+
         # Переводим текст в span элементах
         translated_line = html_line
         for span_text in spans:
@@ -28,36 +28,35 @@ class TranslatorTest:
             translated_line = translated_line.replace(
                 f">{span_text}<", f">{translated_text}<"
             )
-        
+
         return translated_line
 
     def translate_batch(self, batch):
         """
         Тестовый перевод батча строк
-        
+
         Args:
-            batch: список словарей с ключами 'index' и 'line'
-        
+            batch: список словарей с ключами 'line_number' и 'line'
+
         Returns:
-            list: список словарей с ключами 'index' и 'translated_line'
+            list: список словарей с ключами 'line_number' и 'translated_line'
         """
         time.sleep(0.2)  # Имитируем задержку API для батча
-        
+
         translated_batch = []
-        
+
         for item in batch:
-            index = item["index"]
+            line_number = item["line_number"]
             line = item["line"]
-            
+
             # Ищем span элементы
             spans = re.findall(r"<span[^>]*>(.*?)</span>", line, re.DOTALL)
-            
+
             if not spans:
                 # Если нет span элементов, возвращаем строку без изменений
-                translated_batch.append({
-                    "index": index,
-                    "translated_line": line
-                })
+                translated_batch.append(
+                    {"line_number": line_number, "translated_line": line}
+                )
             else:
                 # Переводим текст в span элементах
                 translated_line = line
@@ -66,12 +65,11 @@ class TranslatorTest:
                     translated_line = translated_line.replace(
                         f">{span_text}<", f">{translated_text}<"
                     )
-                
-                translated_batch.append({
-                    "index": index,
-                    "translated_line": translated_line
-                })
-        
+
+                translated_batch.append(
+                    {"line_number": line_number, "translated_line": translated_line}
+                )
+
         return translated_batch
 
     def get_token_stats(self):

@@ -105,6 +105,7 @@ def process_html_file(input_file, output_file=None):
         # Обрабатываем файл батчами
         with open(output_file, "w", encoding="utf-8") as output_f:
             i = start_line
+            batch_counter = 1
 
             while i < total_lines:
                 # Создаем батч
@@ -119,7 +120,9 @@ def process_html_file(input_file, output_file=None):
                 )
 
                 if has_translatable_content:
-                    print(f"Переводим батч строк {i+1}-{i+len(batch)}/{total_lines}")
+                    print(
+                        f"send {batch_counter} batch {len(batch)} lines ({i+1}-{i+len(batch)}/{total_lines})"
+                    )
 
                     # Отправляем батч на перевод
                     translated_batch = translator.translate_batch(batch)
@@ -140,6 +143,7 @@ def process_html_file(input_file, output_file=None):
 
                 # Переходим к следующему батчу
                 i += len(batch)
+                batch_counter += 1
 
                 # Выводим прогресс каждые 10 строк
                 if i % 10 == 0 or i >= total_lines:
