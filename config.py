@@ -30,3 +30,4 @@ TARGET_LANGUAGE = "russian"
 OPENAI_MODEL = "gpt-4o-mini"  # $0.15	$0.075	$0.60
 
 sentence_endings = [".", "!", "?", "...", "!..", "?.."]
+BATCH_LIMIT = 1200

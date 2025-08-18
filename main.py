@@ -7,7 +7,7 @@ from src.core.translator_test import TranslatorTest
 from src.core.progress_manager import ProgressManager
 from src.parsers.html_parser import HTMLParser
 from src.parsers.span_merger import process_lines
-from config import MODE, OPENAI_MODEL
+from config import MODE, OPENAI_MODEL, BATCH_LIMIT
 from src.prompts.prompt_template import save_prompt_to_file
 from src.gui.file_selector import select_file_gui, select_output_file_gui
 
@@ -28,21 +28,35 @@ def get_translator():
 
 def create_batch(lines, start_index, batch_size=3):
     """
-    Создает батч строк для отправки в нейросеть
+    Создает батч строк для отправки в нейросеть на основе лимита символов
 
     Args:
         lines: список всех строк
         start_index: индекс начала батча
-        batch_size: размер батча
+        batch_size: устаревший параметр (оставлен для совместимости)
 
     Returns:
         list: батч строк с их номерами
     """
     batch = []
-    end_index = min(start_index + batch_size, len(lines))
+    current_length = 0
+    i = start_index
 
-    for i in range(start_index, end_index):
-        batch.append({"line_number": i + 1, "line": lines[i].strip()})  # Нумерация с 1
+    while i < len(lines):
+        line = lines[i].strip()
+        line_length = len(line)
+
+        # Добавляем строку в батч
+        batch.append({"line_number": i + 1, "line": line})
+        current_length += line_length
+
+        # Проверяем, не превысили ли лимит
+        if current_length > BATCH_LIMIT:
+            # Если превысили лимит, убираем последнюю строку и завершаем
+            batch.pop()
+            break
+
+        i += 1
 
     return batch
 
@@ -86,7 +100,7 @@ def process_html_file(input_file, output_file=None):
         print(f"Начинаем обработку файла: {input_file}")
         print(f"Всего строк после объединения: {total_lines}")
         print(f"Начинаем с строки: {start_line + 1}")
-        print(f"Размер батча: 3 строки")
+        print(f"Лимит батча: {BATCH_LIMIT} символов")
 
         # Обрабатываем файл батчами
         with open(output_file, "w", encoding="utf-8") as output_f:
