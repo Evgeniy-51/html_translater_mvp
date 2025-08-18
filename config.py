@@ -1,5 +1,5 @@
-MODE = "test"
-# MODE = "work"
+# MODE = "test"
+MODE = "work"
 
 INPUT_LANGUAGE = "english"
 # INPUT_LANGUAGE = "chinese"
@@ -29,5 +29,5 @@ TARGET_LANGUAGE = "russian"
 # OPENAI_MODEL = "gpt-4.1-nano"  # $0.10	$0.025	$0.40
 OPENAI_MODEL = "gpt-4o-mini"  # $0.15	$0.075	$0.60
 
-sentence_endings = [".", "!", "?", "...", "!..", "?.."]
-BATCH_LIMIT = 1200
+sentence_endings = [".", "!", "?", ".."]
+BATCH_LIMIT = 1500

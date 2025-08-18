@@ -46,16 +46,14 @@ def create_batch(lines, start_index, batch_size=3):
         line = lines[i].strip()
         line_length = len(line)
 
+        # Проверяем, не превысим ли лимит, если добавим эту строку
+        if current_length + line_length > BATCH_LIMIT:
+            # Если превысим лимит, завершаем без добавления строки
+            break
+
         # Добавляем строку в батч
         batch.append({"line_number": i + 1, "line": line})
         current_length += line_length
-
-        # Проверяем, не превысили ли лимит
-        if current_length > BATCH_LIMIT:
-            # Если превысили лимит, убираем последнюю строку и завершаем
-            batch.pop()
-            break
-
         i += 1
 
     return batch
