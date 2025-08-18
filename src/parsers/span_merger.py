@@ -1,124 +1,130 @@
 import re
+from config import sentence_endings
 
 
-class SpanMerger:
-    @staticmethod
-    def should_merge_spans(current_line, next_line):
-        """
-        Проверяет, нужно ли объединить span элементы из текущей и следующей строки
-        """
-        if not current_line or not next_line:
-            return False
+def clean_html_tags(text):
+    """
+    Удаляет HTML-теги из текста, оставляя только текст
+    """
+    # Удаляем все HTML-теги
+    clean_text = re.sub(r"<[^>]+>", "", text)
+    return clean_text.strip()
 
-        # Извлекаем текст из span элементов
-        current_spans = re.findall(r"<span[^>]*>(.*?)</span>", current_line, re.DOTALL)
-        next_spans = re.findall(r"<span[^>]*>(.*?)</span>", next_line, re.DOTALL)
 
-        if not current_spans or not next_spans:
-            return False
+def should_merge_spans(current_line, next_line):
+    """
+    Определяет, нужно ли объединить span элементы из текущей и следующей строки
+    """
+    # Ищем span элементы в текущей строке
+    current_spans = re.findall(r"<span[^>]*>(.*?)</span>", current_line, re.DOTALL)
+    if not current_spans:
+        return False
 
-        # Берем последний span из текущей строки и первый из следующей
-        current_text = current_spans[-1].strip()
-        next_text = next_spans[0].strip()
+    # Ищем span элементы в следующей строке
+    next_spans = re.findall(r"<span[^>]*>(.*?)</span>", next_line, re.DOTALL)
+    if not next_spans:
+        return False
 
-        # Проверяем условия объединения
-        # 1. Текущий span не заканчивается на знаки завершения
-        # 2. Следующий span не начинается с заглавной буквы
-        sentence_endings = [".", "!", "?", "...", "!..", "?.."]  # Не изменяй этот список!!!
-        current_ends_with_sentence = any(
-            current_text.endswith(ending) for ending in sentence_endings
-        )
-        next_starts_with_capital = next_text and next_text[0].isupper()
+    # Получаем текст последнего span из текущей строки
+    current_text = current_spans[-1].strip()
 
-        return not current_ends_with_sentence and not next_starts_with_capital
+    # ОСНОВНАЯ ПРОВЕРКА: Текущий span не заканчивается знаками sentence_endings
+    clean_current_text = clean_html_tags(current_text)
+    current_ends_with_punctuation = any(
+        clean_current_text.endswith(p) for p in sentence_endings
+    )
 
-    @staticmethod
-    def merge_spans(current_line, next_line):
-        """
-        Объединяет span элементы из двух строк
-        """
-        # Находим все span элементы
-        current_spans = re.findall(r"(<span[^>]*>.*?</span>)", current_line, re.DOTALL)
-        next_spans = re.findall(r"(<span[^>]*>.*?</span>)", next_line, re.DOTALL)
+    # Если текущий span заканчивается знаками препинания - НЕ объединяем
+    if current_ends_with_punctuation:
+        return False
 
-        if not current_spans or not next_spans:
-            return current_line, next_line
+    # ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Следующий span не начинается с заглавной буквы
+    next_text = next_spans[0].strip()
+    clean_next_text = clean_html_tags(next_text)
+    next_starts_with_capital = clean_next_text and clean_next_text[0].isupper()
 
-        # Объединяем последний span из текущей строки с первым из следующей
-        last_current_span = current_spans[-1]
-        first_next_span = next_spans[0]
+    # Если следующий span начинается с заглавной буквы - НЕ объединяем
+    return not next_starts_with_capital
 
-        # Извлекаем содержимое span элементов
-        last_content = re.search(
-            r"<span[^>]*>(.*?)</span>", last_current_span, re.DOTALL
-        )
-        first_content = re.search(
-            r"<span[^>]*>(.*?)</span>", first_next_span, re.DOTALL
-        )
 
-        if not last_content or not first_content:
-            return current_line, next_line
+def merge_spans(current_line, next_line):
+    """
+    Объединяет span элементы из текущей и следующей строки
+    """
+    # Ищем span элементы в текущей строке
+    current_spans = re.findall(r"<span[^>]*>(.*?)</span>", current_line, re.DOTALL)
+    next_spans = re.findall(r"<span[^>]*>(.*?)</span>", next_line, re.DOTALL)
 
-        # Объединяем содержимое
-        merged_content = (
-            last_content.group(1).strip() + " " + first_content.group(1).strip()
-        )
+    if not current_spans or not next_spans:
+        return current_line, next_line
 
-        # Создаем новый объединенный span с атрибутами первого
-        span_attrs = re.search(r"<span([^>]*)>", first_next_span)
-        if span_attrs:
-            new_span = f"<span{span_attrs.group(1)}>{merged_content}</span>"
-        else:
-            new_span = f"<span>{merged_content}</span>"
+    # Объединяем текст последнего span из текущей строки с первым span из следующей
+    merged_text = current_spans[-1].strip() + " " + next_spans[0].strip()
 
-        # Заменяем последний span в текущей строке
-        merged_current = re.sub(
-            r"<span[^>]*>.*?</span>(?=[^<]*$)", new_span, current_line, flags=re.DOTALL
-        )
+    # Заменяем текст в текущей строке
+    current_line = re.sub(
+        r"(<span[^>]*>)(.*?)(</span>)",
+        lambda m: (
+            m.group(1) + merged_text + m.group(3)
+            if m.group(2).strip() == current_spans[-1].strip()
+            else m.group(0)
+        ),
+        current_line,
+        flags=re.DOTALL,
+    )
 
-        # Удаляем первый span из следующей строки
-        merged_next = re.sub(
-            r"<span[^>]*>.*?</span>", "", next_line, count=1, flags=re.DOTALL
-        )
+    # Удаляем первый span из следующей строки
+    next_line = re.sub(
+        r"(<span[^>]*>)(.*?)(</span>)",
+        lambda m: ("" if m.group(2).strip() == next_spans[0].strip() else m.group(0)),
+        next_line,
+        flags=re.DOTALL,
+    )
 
-        return merged_current, merged_next
+    return current_line, next_line
 
-    @staticmethod
-    def process_lines(lines):
-        """
-        Обрабатывает список строк, объединяя разорванные span элементы
-        """
-        if not lines:
-            return lines
 
-        processed_lines = []
-        i = 0
+def clean_li_markers(html_line):
+    """
+    Удаляет лишние маркеры списков, которые появляются при восстановлении HTML из PDF
+    """
+    # Закомментировано: пусть li остаются как есть
+    # return html_line.replace("• &nbsp;", "&nbsp;")
+    return html_line
 
-        while i < len(lines):
-            current_line = lines[i]
 
-            # Проверяем, есть ли следующая строка и нужно ли объединение
-            if i + 1 < len(lines) and SpanMerger.should_merge_spans(
-                current_line, lines[i + 1]
-            ):
-                # Объединяем текущую и следующую строку
-                merged_current, merged_next = SpanMerger.merge_spans(
-                    current_line, lines[i + 1]
-                )
+def process_lines(lines):
+    """
+    Обрабатывает список строк, объединяя разорванные span элементы
+    """
+    if not lines:
+        return lines
 
-                # Добавляем объединенную строку
+    processed_lines = []
+    i = 0
+
+    while i < len(lines):
+        current_line = lines[i]
+
+        # Проверяем, есть ли следующая строка
+        if i + 1 < len(lines):
+            next_line = lines[i + 1]
+
+            # Если нужно объединить span элементы
+            if should_merge_spans(current_line, next_line):
+                # Объединяем строки
+                merged_current, merged_next = merge_spans(current_line, next_line)
+
+                # Добавляем объединенную текущую строку
                 if merged_current.strip():
-                    processed_lines.append(merged_current)
+                    processed_lines.append(clean_li_markers(merged_current))
 
-                # Если в следующей строке остался контент, добавляем его
-                if merged_next.strip():
-                    processed_lines.append(merged_next)
-
-                # Пропускаем следующую строку (она уже обработана)
+                # Пропускаем следующую строку (она была объединена)
                 i += 2
-            else:
-                # Добавляем строку без изменений
-                processed_lines.append(current_line)
-                i += 1
+                continue
 
-        return processed_lines
+        # Если объединение не требуется, добавляем текущую строку как есть
+        processed_lines.append(clean_li_markers(current_line))
+        i += 1
+
+    return processed_lines

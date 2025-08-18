@@ -6,7 +6,7 @@ from src.core.translator import Translator
 from src.core.translator_test import TranslatorTest
 from src.core.progress_manager import ProgressManager
 from src.parsers.html_parser import HTMLParser
-from src.parsers.span_merger import SpanMerger
+from src.parsers.span_merger import process_lines
 from config import MODE, OPENAI_MODEL
 from src.prompts.prompt_template import save_prompt_to_file
 from src.gui.file_selector import select_file_gui, select_output_file_gui
@@ -29,24 +29,21 @@ def get_translator():
 def create_batch(lines, start_index, batch_size=3):
     """
     Создает батч строк для отправки в нейросеть
-    
+
     Args:
         lines: список всех строк
         start_index: индекс начала батча
         batch_size: размер батча
-    
+
     Returns:
-        list: батч строк с их индексами
+        list: батч строк с их номерами
     """
     batch = []
     end_index = min(start_index + batch_size, len(lines))
-    
+
     for i in range(start_index, end_index):
-        batch.append({
-            "index": i + 1,  # Нумерация с 1
-            "line": lines[i].strip()
-        })
-    
+        batch.append({"line_number": i + 1, "line": lines[i].strip()})  # Нумерация с 1
+
     return batch
 
 
@@ -70,7 +67,6 @@ def process_html_file(input_file, output_file=None):
     translator = get_translator()
     progress_manager = ProgressManager()
     parser = HTMLParser()
-    merger = SpanMerger()
 
     try:
         # Читаем все строки файла
@@ -79,7 +75,7 @@ def process_html_file(input_file, output_file=None):
 
         # Объединяем разорванные span элементы
         print("Объединяем разорванные параграфы...")
-        processed_lines = merger.process_lines(all_lines)
+        processed_lines = process_lines(all_lines)
 
         total_lines = len(processed_lines)
         progress_manager.set_total_lines(total_lines, input_file)
@@ -95,38 +91,42 @@ def process_html_file(input_file, output_file=None):
         # Обрабатываем файл батчами
         with open(output_file, "w", encoding="utf-8") as output_f:
             i = start_line
-            
+
             while i < total_lines:
                 # Создаем батч
                 batch = create_batch(processed_lines, i, batch_size=3)
-                
+
                 if not batch:
                     break
-                
+
                 # Проверяем, есть ли в батче строки с span элементами
                 has_translatable_content = any(
                     parser.has_span_elements(item["line"]) for item in batch
                 )
-                
+
                 if has_translatable_content:
                     print(f"Переводим батч строк {i+1}-{i+len(batch)}/{total_lines}")
-                    
+
                     # Отправляем батч на перевод
                     translated_batch = translator.translate_batch(batch)
-                    
+
                     # Сохраняем переведенные строки
                     for item in translated_batch:
                         output_f.write(item["translated_line"] + "\n")
-                        progress_manager.update_progress(item["index"], translated=True)
+                        progress_manager.update_progress(
+                            item["line_number"], translated=True
+                        )
                 else:
                     # Копируем строки без изменений
                     for item in batch:
                         output_f.write(item["line"] + "\n")
-                        progress_manager.update_progress(item["index"], translated=False)
-                
+                        progress_manager.update_progress(
+                            item["line_number"], translated=False
+                        )
+
                 # Переходим к следующему батчу
                 i += len(batch)
-                
+
                 # Выводим прогресс каждые 10 строк
                 if i % 10 == 0 or i >= total_lines:
                     print(f"Обработано строк: {i}/{total_lines}")
@@ -142,7 +142,7 @@ def process_html_file(input_file, output_file=None):
             print(f"Выходных токенов: {stats['output_tokens']:,}")
             print(f"Всего токенов: {stats['total_tokens']:,}")
             print("==========================")
-            
+
             # Выводим стоимость перевода
             if hasattr(translator, "get_translation_cost"):
                 cost_report = translator.get_translation_cost()
