@@ -56,7 +56,7 @@ def merge_spans(current_line, next_line):
     next_spans = re.findall(r"<span[^>]*>(.*?)</span>", next_line, re.DOTALL)
 
     if not current_spans or not next_spans:
-        return current_line, next_line
+        return current_line
 
     # Объединяем текст последнего span из текущей строки с первым span из следующей
     merged_text = current_spans[-1].strip() + " " + next_spans[0].strip()
@@ -73,15 +73,17 @@ def merge_spans(current_line, next_line):
         flags=re.DOTALL,
     )
 
-    # Удаляем первый span из следующей строки
-    next_line = re.sub(
-        r"(<span[^>]*>)(.*?)(</span>)",
-        lambda m: ("" if m.group(2).strip() == next_spans[0].strip() else m.group(0)),
-        next_line,
-        flags=re.DOTALL,
-    )
+    # Добавляем оставшиеся span элементы из следующей строки
+    remaining_spans = next_spans[1:]
+    for span_text in remaining_spans:
+        # Находим соответствующий span в next_line и добавляем его к current_line
+        span_pattern = r"<span[^>]*>" + re.escape(span_text.strip()) + r"</span>"
+        span_match = re.search(span_pattern, next_line, re.DOTALL)
+        if span_match:
+            # Добавляем span перед закрывающим тегом </p>
+            current_line = current_line.replace("</p>", span_match.group(0) + "</p>")
 
-    return current_line, next_line
+    return current_line
 
 
 def clean_li_markers(html_line):
@@ -113,11 +115,11 @@ def process_lines(lines):
             # Если нужно объединить span элементы
             if should_merge_spans(current_line, next_line):
                 # Объединяем строки
-                merged_current, merged_next = merge_spans(current_line, next_line)
+                merged_line = merge_spans(current_line, next_line)
 
-                # Добавляем объединенную текущую строку
-                if merged_current.strip():
-                    processed_lines.append(clean_li_markers(merged_current))
+                # Добавляем объединенную строку
+                if merged_line.strip():
+                    processed_lines.append(clean_li_markers(merged_line))
 
                 # Пропускаем следующую строку (она была объединена)
                 i += 2

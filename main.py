@@ -46,6 +46,12 @@ def create_batch(lines, start_index, batch_size=3):
         line = lines[i].strip()
         line_length = len(line)
 
+        # Если это первая строка в батче и она превышает лимит,
+        # отправляем её отдельно
+        if current_length == 0 and line_length > BATCH_LIMIT:
+            batch.append({"line_number": i + 1, "line": line})
+            return batch
+
         # Проверяем, не превысим ли лимит, если добавим эту строку
         if current_length + line_length > BATCH_LIMIT:
             # Если превысим лимит, завершаем без добавления строки
